@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
 	// Accept the data packet from client and verification
 	socklen_t client_len = sizeof(clientaddr);
-	connect_sock = accept(listen_sock, (sockaddr*)&clientaddr, &client_len);
+	connect_sock = accept(listen_sock, (struct sockaddr*)&clientaddr, &client_len);
 	if (connect_sock< 0)
 	{
 		printf("# Error: server accept failed #\n");

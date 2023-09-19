@@ -1,10 +1,10 @@
-all: server client
+CFLAGS=-std=c99 -Wall -O3 -DNDEBUG -DUSE_MEM_POOL=1
+OPTFLAGS=
 
-server: server.cpp
-	gcc -g -o server server.c
+OBJS=server.o
 
-client: client.cpp
-	gcc -g -o client client.c
+crazyserver : $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ $(OPTFLAGS)
 	
 clean :
-	rm -f *.o client server
+	rm -f *.o crazyserver
