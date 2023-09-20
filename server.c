@@ -25,6 +25,21 @@ void communicate(int sockfd)
 
         // read the message from client and copy it in buffer
         read(sockfd, msg_buff, sizeof(msg_buff));
+
+		// -----------------------------------------------------
+		// Add here an html request parser and extract following fields:
+		// - Start line:
+		// - - HTTP Method
+		// - - URI
+		// - - HTTP version
+		// - Headers:
+		// - - Content-type
+		// - - Content-Length
+		// - Body
+		// -----------------------------------------------------
+		// link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
+		// -----------------------------------------------------
+
         // print buffer which contains the client contents
         printf("From client: %s", msg_buff);
 
