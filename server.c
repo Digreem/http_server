@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "hashtable.h"
 
 #define PORT 8080
 #define MAX_LENGTH  100
@@ -76,6 +77,12 @@ int main(int argc, char *argv[])
 	int listen_sock, connect_sock;
 	// Socket address structure
 	struct sockaddr_in servaddr, clientaddr;
+
+	// hashtable test //-----------------------------
+	struct hashtable *h_table = hashtable_create(128, NULL);
+	hashtable_destroy(h_table);
+	//-----------------------------------------------
+
 
 	listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (listen_sock == -1)
