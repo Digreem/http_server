@@ -41,6 +41,21 @@ void communicate(int sockfd)
 		// link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 		// -----------------------------------------------------
 
+
+		// -----------------------------------------------------
+		// Add hashing to lookup resources:
+		// Key  -- URI
+		// Data -- resource structure
+		// -----------------------------------------------------
+
+		// -----------------------------------------------------
+		// Add file reading from:
+		// https://github.com/bloominstituteoftechnology/C-Web-Server/blob/master/src/file.c
+		//------------------------------------------------------
+		// Think out about how to manage both text and binary files
+		//------------------------------------------------------
+
+
         // print buffer which contains the client contents
         printf("From client: %s", msg_buff);
 
