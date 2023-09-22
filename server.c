@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hashtable.h"
+#include "http_parser.h"
 
 #define PORT 8080
 #define MAX_LENGTH  100
@@ -26,6 +27,11 @@ void communicate(int sockfd)
 
         // read the message from client and copy it in buffer
         read(sockfd, msg_buff, sizeof(msg_buff));
+
+		// ----------------------------------------------------
+		// thinks about dynamic reading with fixed window buffer
+		// like: https://github.com/chendotjs/lotos/blob/master/src/request.c || Func: request_recv()
+		//-----------------------------------------------------
 
 		// -----------------------------------------------------
 		// Add here an html request parser and extract following fields:
