@@ -108,6 +108,8 @@ int main(int argc, char *argv[])
 
 	getchar();  // Debug purpose
 	return 0; // Debug purpose
+
+	
 	// Listening & connection sockets
 	int listen_sock, connect_sock;
 	// Socket address structure
