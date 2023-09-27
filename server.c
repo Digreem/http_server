@@ -17,6 +17,15 @@
 char msg_buff[MAX_LENGTH];
 char response_buff[RESPONSE_BUF_SIZE];
 
+char http_msg_test[] = "POST /foo HTTP/1.1\r\n"
+	"User-Agent: curl/7.35.0\r\n"
+	"Host: example.com\r\n"
+	"Accept: */*\r\n"
+	"Content-Length: 3\r\n"
+	"Content-Type: text/plain\r\n"
+	"\r\n"
+	"foo";
+
 void communicate(int sockfd)
 {
     int n;
@@ -94,6 +103,11 @@ void communicate(int sockfd)
 int main(int argc, char *argv[])
 {
 	printf("Hello from server!!!\n");
+
+	printf("%s",http_msg_test);
+
+	getchar();  // Debug purpose
+	return 0; // Debug purpose
 	// Listening & connection sockets
 	int listen_sock, connect_sock;
 	// Socket address structure
