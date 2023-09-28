@@ -102,18 +102,22 @@ void communicate(int sockfd)
 
 int main(int argc, char *argv[])
 {
-	printf("Hello from server!!!\n");
-
-	printf("%s",http_msg_test);
-
-	getchar();  // Debug purpose
-	return 0; // Debug purpose
-
-	
 	// Listening & connection sockets
 	int listen_sock, connect_sock;
 	// Socket address structure
 	struct sockaddr_in servaddr, clientaddr;
+
+	printf("Hello from server!!!\n");
+
+	printf("%s",http_msg_test);
+
+	//----------- test parser------------------ 
+	http_request_t request;
+	int parse_res = parse_request(http_msg_test, strlen(http_msg_test), &request);
+	//-----------------------------------------
+
+	getchar();  // Debug purpose
+	return 0; // Debug purpose
 
 	// hashtable test //-----------------------------
 	struct hashtable *h_table = hashtable_create(128, NULL);
