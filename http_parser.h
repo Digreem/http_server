@@ -17,15 +17,20 @@ typedef struct {
 
 /* Avaliable http request methods*/
 typedef enum http_method{
-  HTTP_DELETE,
+  // Supported methods
+  HTTP_DELETE = 0,
   HTTP_GET,
-  HTTP_POST
-} http_method;
+  HTTP_POST,
+  // Supported methods count
+  HTTP_METHODS_COUNT,
+  // If method undefined
+  HTTP_UNDEFINED
+} http_method_t;
  
 /* http request structure*/ 
 typedef struct http_request
 {
-    http_method method;
+    http_method_t method;
     char uri[URI_MAX_LENGTH];
     http_version version;    
 }http_request_t;

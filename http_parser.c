@@ -1,11 +1,17 @@
 #include "http_parser.h"
 #include "http_parser.h"
 #include <stdbool.h>
+#include <ctype.h>
+#include <string.h>
+
+
 
 //http syntax: https://httpwg.org/specs/rfc7230.html#core.rules
 
 // "POST /foo HTTP/1.1\r\n"
 // request-line   = method SP request-target SP HTTP-version CRLF
+
+#define HTTP_METHOD_MAX_LENGTH 16
 
 typedef struct http_msg_integrity_flags
 {
@@ -23,7 +29,33 @@ typedef enum parser_state
 
 } parser_state_t;
 
-int parse_request(char *request_buf, unsigned int buf_len, http_request_t * request)
+char supported_http_methods[HTTP_METHODS_COUNT][HTTP_METHOD_MAX_LENGTH] = 
+                                                {[HTTP_DELETE]="delete",
+                                                 [HTTP_GET]="get",
+                                                 [HTTP_POST]="post"};
+
+static http_method_t parse_method(char* request_buf, unsigned method_start, unsigned method_end)
+{
+    char method_str[HTTP_METHOD_MAX_LENGTH] = "";
+    unsigned length = method_end - method_start;
+    
+    if(length >= HTTP_METHOD_MAX_LENGTH)
+        return HTTP_UNDEFINED;
+    
+    return HTTP_UNDEFINED;
+}
+
+static int parse_uri(char *request_buf, unsigned method_start, unsigned method_end, http_request_t* request)
+{
+    return REQUEST_OK;
+}
+
+static int parse_http_version(char *request_buf, unsigned method_start, unsigned method_end, http_request_t* request)
+{
+    return REQUEST_OK;
+}
+
+int parse_request(char *request_buf, unsigned int buf_len, http_request_t* request)
 {
     int retval = INVALID_REQUEST;
     unsigned int pos = 0;
@@ -58,11 +90,14 @@ int parse_request(char *request_buf, unsigned int buf_len, http_request_t * requ
                     return INVALID_REQUEST;
                 }
                 break;
-                
+
             case PS_METHOD:
                 if(' ' == request_buf[pos])
                 {
                     // call parser_detect_method()
+                    request->method = parse_method(request_buf, pos_method_begin, pos);
+                    if(HTTP_UNDEFINED == request->method)
+                        return INVALID_REQUEST;
                     p_state = PS_URI;
                     pos_uri_begin = pos + 1;
                     continue;
