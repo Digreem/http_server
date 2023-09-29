@@ -6,6 +6,7 @@
 #define REQUEST_OK (1)
 #define INVALID_REQUEST (-1)
 #define UNFINISHED_REQUEST (-2)
+#define INSUFFICIENT_BUF (-3)
 
 #define URI_MAX_LENGTH 256
 
