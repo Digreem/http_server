@@ -27,10 +27,31 @@ typedef enum http_method{
   // If method undefined
   HTTP_UNDEFINED
 } http_method_t;
- 
+
+/* Avaliable http headers*/
+typedef enum http_headers{
+  // Supported methods
+  ContentType = 0,
+  ContentLength,
+  // Supported methods count
+  HttpHeadersCount,
+  // If method undefined
+  HeaderUndefined
+} http_headers_t;
+
+typedef struct io_buf
+{
+    char *buff_ptr;
+    unsigned buff_len;
+}io_buf_t;
+
 /* http request structure*/ 
 typedef struct http_request
-{
+{   
+    // input buffer
+    io_buf_t msg_buf; 
+
+    //parsed parameters:
     http_method_t method;
     char uri[URI_MAX_LENGTH];
     http_version version;    
@@ -38,7 +59,7 @@ typedef struct http_request
 
 
 
-int parse_request(char *request_buf, unsigned int buf_len, http_request_t * request);
+int parse_request(http_request_t * request);
 
 
 #endif

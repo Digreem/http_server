@@ -53,6 +53,7 @@ void communicate(int sockfd)
 {
     //int n;
 	http_request_t request;
+
     // infinite loop for chat
     //for (;;) {
         bzero(msg_buff, MAX_MSG_LENGTH);
@@ -84,7 +85,7 @@ void communicate(int sockfd)
 		// link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 		// -----------------------------------------------------
 		
-		int parse_res = parse_request(msg_buff, strlen(http_msg_test), &request);
+		//int parse_res = parse_request(msg_buff, strlen(http_msg_test), &request);
 
 
 		// -----------------------------------------------------
