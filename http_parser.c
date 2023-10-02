@@ -32,6 +32,12 @@ typedef enum parser_state
 
 } parser_state_t;
 
+typedef struct parser
+{
+    unsigned curr_pos;
+    parser_state_t state;
+}parser_t;
+
 // All reference string stored in lowercase and comparison performed also in lowercase
 const char supported_http_methods[HTTP_METHODS_COUNT][HTTP_METHOD_MAX_LENGTH] = 
 {  
@@ -43,7 +49,6 @@ const char supported_http_methods[HTTP_METHODS_COUNT][HTTP_METHOD_MAX_LENGTH] =
 //TODO  ??? Find out if name os case-sensitive
 const char supported_http_headers[HttpHeadersCount][HTTP_HD_NAME_MAX_LENGTH] = 
 {
-
     [ContentType] =   "Content-Type",
     [ContentLength] = "Content-Length"                                  
 };
@@ -87,16 +92,19 @@ static http_method_t parse_method(char* request_buf, unsigned method_start, unsi
 
 static int parse_uri(char *request_buf, unsigned uri_start, unsigned uri_end, http_request_t* request)
 {
-    unsigned length = uri_end - uri_start;
+ //  unsigned length = uri_end - uri_start;
 
-    if(length >= URI_MAX_LENGTH)
-        return INSUFFICIENT_BUF;
+    // if(length >= URI_MAX_LENGTH)
+    //     return INSUFFICIENT_BUF;
 
     if(request_buf[uri_start] != '/')
         return INVALID_REQUEST;
+
+    request->uri.str = request_buf + uri_start;
+    request->uri.len = uri_end - uri_start;
     
-    memmove(request->uri, request_buf + uri_start, length);
-    request->uri[length] = '\0';
+    // memmove(request->uri, request_buf + uri_start, length);
+    // request->uri[length] = '\0';
 
     return REQUEST_OK;
 }
@@ -126,32 +134,15 @@ static int parse_http_version(char *request_buf, unsigned version_start, unsigne
     return REQUEST_OK;
 }
 
-static int parse_start_line(http_request_t* request_ptr, parser_state_t* p_state)
-{
-    return 0;
-}
-
-static int parse_headers(http_request_t* request_ptr, parser_state_t* p_state)
-{
-    return 0;
-}
-
-static int parse_payload(http_request_t* request_ptr, parser_state_t* p_state)
-{
-    return 0;
-}
-
-int parse_request(http_request_t* request_ptr)
+static int parse_start_line(http_request_t* request_ptr, parser_t* pr)
 {
     int retval = INVALID_REQUEST;
-    unsigned int pos = 0;
-    unsigned int pos_method_begin = 0;
-    unsigned int pos_uri_begin = 0;
-    unsigned int pos_version_begin = 0;
 
+    unsigned pos = pr->curr_pos;
+    unsigned pos_method_begin = 0;
+    unsigned pos_uri_begin = 0;
+    unsigned pos_version_begin = 0;
     char *request_buf = request_ptr->msg_buf.buff_ptr;
-
-    parser_state_t p_state = PS_PARSER_START;
 
     bool parse_end = false;
 
@@ -160,7 +151,7 @@ int parse_request(http_request_t* request_ptr)
         if(true == parse_end)
             break;
 
-        switch(p_state)
+        switch(pr->state)
         {
             case PS_PARSER_START:
                 if(' ' == request_buf[pos] || '\t' == request_buf[pos])
@@ -171,7 +162,7 @@ int parse_request(http_request_t* request_ptr)
                         ('a' <= request_buf[pos] && 'z' >= request_buf[pos]))
                 {
                     pos_method_begin = pos;
-                    p_state = PS_METHOD;
+                    pr->state = PS_METHOD;
                     continue;
                 }
                 else
@@ -187,7 +178,7 @@ int parse_request(http_request_t* request_ptr)
                     request_ptr->method = parse_method(request_buf, pos_method_begin, pos);
                     if(HTTP_UNDEFINED == request_ptr->method)
                         return INVALID_REQUEST;
-                    p_state = PS_URI;
+                    pr->state = PS_URI;
                     pos_uri_begin = pos + 1;
                     continue;
                 }
@@ -209,7 +200,7 @@ int parse_request(http_request_t* request_ptr)
                     if(REQUEST_OK != retval)
                         return retval;
 
-                    p_state = PS_HTTP_VERSION;
+                    pr->state = PS_HTTP_VERSION;
                     pos_version_begin  = pos + 1;
                     continue;
                 }
@@ -225,7 +216,7 @@ int parse_request(http_request_t* request_ptr)
                     retval = parse_http_version(request_buf,pos_version_begin, pos - 1, request_ptr);
                     if(REQUEST_OK != retval)
                         return retval;
-                    p_state = PS_HEADER_BEGIN;
+                    pr->state = PS_HEADER_BEGIN;
                     parse_end = true;
                     continue;
                 }
@@ -234,16 +225,131 @@ int parse_request(http_request_t* request_ptr)
                     continue;
                 }         
                 break;
-            case PS_HEADER_BEGIN:
-            {
 
-            }
+            default:
+                break;
         }
     }
     if(true == parse_end)
+    {
         retval = REQUEST_OK;
+        pr->curr_pos = pos;
+    }
     else
+    {
         retval = UNFINISHED_REQUEST;
+    }
 
     return retval; 
+}
+
+static bool is_header_name_symbol(char c)
+{
+    if ((c > 'a' && c < 'z') || (c > 'A' && c < 'Z') || (c > '0' && c < '9') || (c == '-'))
+        return true;
+    else 
+        return false;
+}
+
+//doc: https://httpwg.org/specs/rfc7230.html#header.fields
+//header-field   = field-name ":" OWS field-value OWS
+//OWS = *( SP / HTAB )
+//      ; optional whitespace
+
+static int parse_header(http_request_t* request_ptr, parser_t *pr)
+{
+    int retval = INVALID_REQUEST;
+    unsigned pos = pr->curr_pos;
+
+    char *msg_buff = request_ptr->msg_buf.buff_ptr;  
+
+    bool parse_end = false;
+
+    for( ;pos < request_ptr->msg_buf.buff_len; pos++)
+    {
+        if(true == parse_end)
+            break;
+
+        switch(pr->state)
+        {
+            case PS_HEADER_BEGIN:
+                if(is_header_name_symbol(msg_buff[pos]))
+                    //next state
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
+    return retval;
+}
+
+static int parse_payload(http_request_t* request_ptr, parser_state_t* p_state, unsigned pos)
+{
+    return 0;
+}
+
+// doc: https://httpwg.org/specs/rfc7230.html#http.message
+//  HTTP-message   = start-line
+//                   *( header-field CRLF )
+//                   CRLF
+//                   [ message-body ]
+
+int parse_request(http_request_t* request_ptr)
+{
+    int retval = INVALID_REQUEST;
+
+    parser_t parser;
+    bool headers_end = false;
+    parser.state = PS_PARSER_START;
+    parser.curr_pos = 0;
+
+    // parse start line
+    retval = parse_start_line(request_ptr, &parser);
+    if(retval != REQUEST_OK)
+        return retval; 
+
+    // parse headers
+    while(1)
+    {
+        // check "\r\n" symbols signaling about end of headers field
+        if(request_ptr->msg_buf.buff_len <= parser.curr_pos + 1)
+            return INVALID_REQUEST;
+        else
+        {
+            if(request_ptr->msg_buf.buff_ptr[parser.curr_pos] == '\r' &&
+               request_ptr->msg_buf.buff_ptr[parser.curr_pos + 1] == '\n')
+            {
+                break;
+                headers_end = true;
+            }
+        }
+        
+        // parse header line
+        retval = parse_header(request_ptr, &parser);
+        if(retval != REQUEST_OK)
+            return retval;
+
+        // decide if we have to parse http payload
+
+        return retval;
+
+    }
+    
+
+    return retval; 
+}
+
+//transform rstr to C-style string 
+/** @return length of output string or -1 in case of buffer length is insufficient */
+int rstr_to_cstr(rstr_t* source, char* dest_buf, unsigned buf_length)
+{
+    if (buf_length <= (unsigned)source->len)
+        return -1;
+
+    memcpy(dest_buf, source->str, source->len);
+    dest_buf[source->len] = '\0';
+    return source->len;
 }
