@@ -133,14 +133,17 @@ int main(int argc, char *argv[])
 	//printf("%s",http_msg_test);
 
 	//----------- test parser------------------ 
-	// http_request_t request;
-	// int parse_res = parse_request(http_msg_test, strlen(http_msg_test), &request);
-	// if(parse_res == REQUEST_OK)
-	// 	print_parsed_request(&request);
+	http_request_t request;
+	request.msg_buf.buff_ptr = http_msg_test;
+	request.msg_buf.buff_len = sizeof(http_msg_test);
+
+	int parse_res = parse_request(&request);
+	if(parse_res == REQUEST_OK)
+	print_parsed_request(&request);
 	//-----------------------------------------
 
-	// getchar();  // Debug purpose
-	// return 0; // Debug purpose
+	getchar();  // Debug purpose
+	return 0; // Debug purpose
 
 	// hashtable test //-----------------------------
 	// struct hashtable *h_table = hashtable_create(128, NULL);
@@ -213,4 +216,5 @@ int main(int argc, char *argv[])
 	printf("# Listening socket closed #\n");
 
 	return 0;
+
 }

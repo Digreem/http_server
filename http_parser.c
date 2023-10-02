@@ -29,6 +29,9 @@ typedef enum parser_state
     PS_URI,
     PS_HTTP_VERSION,
     PS_HEADER_BEGIN,
+    PS_HEADER_NAME_END,
+    PS_HEADER_VALUE,
+    PS_HEADER_VALUE_END,
 
 } parser_state_t;
 
@@ -245,7 +248,7 @@ static int parse_start_line(http_request_t* request_ptr, parser_t* pr)
 
 static bool is_header_name_symbol(char c)
 {
-    if ((c > 'a' && c < 'z') || (c > 'A' && c < 'Z') || (c > '0' && c < '9') || (c == '-'))
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '-'))
         return true;
     else 
         return false;
@@ -261,6 +264,11 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
     int retval = INVALID_REQUEST;
     unsigned pos = pr->curr_pos;
 
+    unsigned pos_header_name_begin = pos;
+    unsigned pos_header_name_end = 0;
+    unsigned pos_header_val_begin = 0;
+    unsigned pos_header_val_end = 0;
+
     char *msg_buff = request_ptr->msg_buf.buff_ptr;  
 
     bool parse_end = false;
@@ -270,17 +278,81 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
         if(true == parse_end)
             break;
 
+        char cc = msg_buff[pos]; //current symbol
+
         switch(pr->state)
         {
             case PS_HEADER_BEGIN:
-                if(is_header_name_symbol(msg_buff[pos]))
-                    //next state
+                if(is_header_name_symbol(cc))
+                {
+                    continue;
+                }
+                else if (':' == cc)
+                {
+                    pr->state = PS_HEADER_NAME_END;
+                    pos_header_name_end = pos;
+                }
+                else
+                {
+                    return INVALID_REQUEST;
+                }
                 break;
 
+            case PS_HEADER_NAME_END:
+                if(' ' == cc || '\t' == cc) // skip OWS
+                {
+                    continue;
+                }
+                else if('\r' == cc || '\n' == cc)
+                {
+                    return INVALID_REQUEST;
+                }
+                else
+                {
+                    pr->state = PS_HEADER_VALUE;
+                    pos_header_val_begin = pos;
+                }
+                break;
+            case PS_HEADER_VALUE:
+                if(' ' == cc || '\t' == cc || '\n' == cc || '\r' == cc)
+                {
+                    pr->state = PS_HEADER_VALUE_END;
+                    pos_header_val_end = pos;
+                }
+                else
+                {
+                    continue;
+                }
+                break;
+            case PS_HEADER_VALUE_END:
+                if(' ' == cc || '\t' == cc) // skip OWS
+                {
+                    continue;
+                }
+                else if('\r' == msg_buff[pos - 1] && '\n' == msg_buff[pos])
+                {
+                    parse_end = true;
+                    pr->state = PS_HEADER_BEGIN;
+                }
+                else
+                {
+                    return INVALID_REQUEST; 
+                }    
+
+                break;
             default:
                 break;
         }
+    }
 
+    if(parse_end)
+    {
+        // recognize or ignore header 
+        retval = REQUEST_OK;
+    }
+    else
+    {
+        retval = UNFINISHED_REQUEST;
     }
 
     return retval;
@@ -322,8 +394,9 @@ int parse_request(http_request_t* request_ptr)
             if(request_ptr->msg_buf.buff_ptr[parser.curr_pos] == '\r' &&
                request_ptr->msg_buf.buff_ptr[parser.curr_pos + 1] == '\n')
             {
-                break;
                 headers_end = true;
+                break;
+
             }
         }
         
