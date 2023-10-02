@@ -406,9 +406,6 @@ int parse_request(http_request_t* request_ptr)
             return retval;
 
         // decide if we have to parse http payload
-
-        return retval;
-
     }
     
 
