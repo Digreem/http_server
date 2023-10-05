@@ -246,6 +246,26 @@ static int parse_start_line(http_request_t* request_ptr, parser_t* pr)
     return retval; 
 }
 
+static int parse_header_content_type(unsigned val_start, unsigned val_end, http_request_t* r_ptr)
+{
+    r_ptr->headers_checkbox[ContentType] = true;
+    r_ptr->hd_content_type.str = r_ptr->msg_buf.buff_ptr + val_start;
+    r_ptr->hd_content_type.len = val_end - val_start;
+
+    if(r_ptr->hd_content_type.len < 0)
+        return INVALID_REQUEST;
+    else 
+        return REQUEST_OK;
+}
+static parse_header_content_length(unsigned val_start, unsigned val_end, http_request_t* r_ptr)
+{
+    r_ptr->headers_checkbox[ContentLength] = true;
+    
+    if(val_end - val_start < 0)
+        return INVALID_REQUEST;
+    
+}
+
 static http_headers_t recognize_header_name(unsigned name_start, unsigned name_end, char* msg_buff)
 {
     char name_cstr_buf[HTTP_HD_NAME_MAX_LENGTH];
@@ -363,7 +383,6 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
                 {
                     return INVALID_REQUEST; 
                 }    
-
                 break;
             default:
                 break;
@@ -375,6 +394,16 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
         // recognize or ignore header 
         http_headers_t header = recognize_header_name(pos_header_name_begin, pos_header_name_end, msg_buff);
         retval = REQUEST_OK;
+        if (header == ContentType)
+        {
+            request_ptr->headers_checkbox[ContentType] = true;
+            request_ptr->hd_content_type.str = pos_header_val_begin;
+            request_ptr->hd_content_type.len = pos_header_val_end - pos_header_val_begin;
+        }
+        else if (header == ContentLength)
+        {
+
+        }
     }
     else
     {
@@ -410,6 +439,9 @@ int parse_request(http_request_t* request_ptr)
         return retval; 
 
     // parse headers
+    request_ptr->headers_checkbox[ContentLength] = false;
+    request_ptr->headers_checkbox[ContentType] = false;
+
     while(1)
     {
         // check "\r\n" symbols signaling about end of headers field
