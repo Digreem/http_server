@@ -246,6 +246,31 @@ static int parse_start_line(http_request_t* request_ptr, parser_t* pr)
     return retval; 
 }
 
+static http_headers_t recognize_header_name(unsigned name_start, unsigned name_end, char* msg_buff)
+{
+    char name_cstr_buf[HTTP_HD_NAME_MAX_LENGTH];
+    unsigned length = name_end - name_start;
+    http_headers_t header = HeaderUndefined;
+
+    if (length >= HTTP_HD_NAME_MAX_LENGTH)
+        return HeaderUndefined;
+
+    // transform to c-style string
+    memcpy(name_cstr_buf, msg_buff + name_start, length);
+    name_cstr_buf[length] = '\0';
+
+    for (unsigned i = 0; i < HttpHeadersCount; i++)
+    {
+        if(0 == strcmp(name_cstr_buf, supported_http_headers[i]))
+        {
+            header = (http_headers_t)i;
+            break;
+        }
+    }
+
+    return header;
+}
+
 static bool is_header_name_symbol(char c)
 {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '-'))
@@ -273,12 +298,12 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
 
     bool parse_end = false;
 
-    for( ;pos < request_ptr->msg_buf.buff_len; pos++)
+    for( ;pr->curr_pos < request_ptr->msg_buf.buff_len; pr->curr_pos++)
     {
         if(true == parse_end)
             break;
 
-        char cc = msg_buff[pos]; //current symbol
+        char cc = msg_buff[pr->curr_pos]; //current symbol
 
         switch(pr->state)
         {
@@ -290,7 +315,7 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
                 else if (':' == cc)
                 {
                     pr->state = PS_HEADER_NAME_END;
-                    pos_header_name_end = pos;
+                    pos_header_name_end = pr->curr_pos;
                 }
                 else
                 {
@@ -310,14 +335,14 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
                 else
                 {
                     pr->state = PS_HEADER_VALUE;
-                    pos_header_val_begin = pos;
+                    pos_header_val_begin = pr->curr_pos;
                 }
                 break;
             case PS_HEADER_VALUE:
                 if(' ' == cc || '\t' == cc || '\n' == cc || '\r' == cc)
                 {
                     pr->state = PS_HEADER_VALUE_END;
-                    pos_header_val_end = pos;
+                    pos_header_val_end = pr->curr_pos;
                 }
                 else
                 {
@@ -329,7 +354,7 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
                 {
                     continue;
                 }
-                else if('\r' == msg_buff[pos - 1] && '\n' == msg_buff[pos])
+                else if('\r' == msg_buff[pr->curr_pos - 1] && '\n' == msg_buff[pr->curr_pos])
                 {
                     parse_end = true;
                     pr->state = PS_HEADER_BEGIN;
@@ -348,6 +373,7 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
     if(parse_end)
     {
         // recognize or ignore header 
+        http_headers_t header = recognize_header_name(pos_header_name_begin, pos_header_name_end, msg_buff);
         retval = REQUEST_OK;
     }
     else
@@ -404,6 +430,8 @@ int parse_request(http_request_t* request_ptr)
         retval = parse_header(request_ptr, &parser);
         if(retval != REQUEST_OK)
             return retval;
+
+        //return retval; 
 
         // decide if we have to parse http payload
     }
