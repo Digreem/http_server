@@ -4,8 +4,6 @@
 #include <ctype.h>
 #include <string.h>
 
-
-
 //http syntax: https://httpwg.org/specs/rfc7230.html#core.rules
 
 // "POST /foo HTTP/1.1\r\n"
@@ -14,13 +12,6 @@
 #define HTTP_METHOD_MAX_LENGTH 16
 #define HTTP_HD_NAME_MAX_LENGTH 32
 #define HTTP_HD_VAL_MAX_LENGTH 128
-
-// typedef struct http_msg_integrity_flags
-// {
-//     bool is_method;
-//     bool is_uri;
-//     bool is_http_version;
-// };
 
 typedef enum parser_state
 {
@@ -56,7 +47,6 @@ const char supported_http_headers[HttpHeadersCount][HTTP_HD_NAME_MAX_LENGTH] =
     [ContentLength] = "Content-Length"                                  
 };
     
-
 //Converting null terminated ASCII C-style string to lowercase
 static void ascii_str_tolower(char *str)
 {
@@ -95,20 +85,12 @@ static http_method_t parse_method(char* request_buf, unsigned method_start, unsi
 
 static int parse_uri(char *request_buf, unsigned uri_start, unsigned uri_end, http_request_t* request)
 {
- //  unsigned length = uri_end - uri_start;
-
-    // if(length >= URI_MAX_LENGTH)
-    //     return INSUFFICIENT_BUF;
-
     if(request_buf[uri_start] != '/')
         return INVALID_REQUEST;
 
     request->uri.str = request_buf + uri_start;
     request->uri.len = uri_end - uri_start;
     
-    // memmove(request->uri, request_buf + uri_start, length);
-    // request->uri[length] = '\0';
-
     return REQUEST_OK;
 }
 
@@ -116,7 +98,6 @@ static int parse_uri(char *request_buf, unsigned uri_start, unsigned uri_end, ht
 //
 //    HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
 //    HTTP-name     = %x48.54.54.50 ; "HTTP", case-sensitive 
-
 static int parse_http_version(char *request_buf, unsigned version_start, unsigned version_end, http_request_t* request_ptr)
 {
     unsigned length = version_end - version_start;
@@ -248,22 +229,41 @@ static int parse_start_line(http_request_t* request_ptr, parser_t* pr)
 
 static int parse_header_content_type(unsigned val_start, unsigned val_end, http_request_t* r_ptr)
 {
-    r_ptr->headers_checkbox[ContentType] = true;
     r_ptr->hd_content_type.str = r_ptr->msg_buf.buff_ptr + val_start;
     r_ptr->hd_content_type.len = val_end - val_start;
 
     if(r_ptr->hd_content_type.len < 0)
+    {
         return INVALID_REQUEST;
+    }
     else 
+    {
         return REQUEST_OK;
+    }
 }
-static parse_header_content_length(unsigned val_start, unsigned val_end, http_request_t* r_ptr)
+static int parse_header_content_length(unsigned val_start, unsigned val_end, http_request_t* r_ptr)
 {
-    r_ptr->headers_checkbox[ContentLength] = true;
-    
+    char* msg_buf = r_ptr->msg_buf.buff_ptr;
+
     if(val_end - val_start < 0)
         return INVALID_REQUEST;
     
+    unsigned cl_val = 0; //Content-Length value
+    r_ptr->hd_content_length = 0;
+    for (int i = val_start; i < val_end; i++)
+    {
+        if(msg_buf[i] > '0' && msg_buf[i] < '9')
+        {
+            cl_val = cl_val * 10 + (unsigned)(msg_buf[i] - '0');
+        }
+        else
+        {
+            return INVALID_REQUEST;
+        }
+    }
+
+    r_ptr->hd_content_length = cl_val;
+    return REQUEST_OK;    
 }
 
 static http_headers_t recognize_header_name(unsigned name_start, unsigned name_end, char* msg_buff)
@@ -303,7 +303,6 @@ static bool is_header_name_symbol(char c)
 //header-field   = field-name ":" OWS field-value OWS
 //OWS = *( SP / HTAB )
 //      ; optional whitespace
-
 static int parse_header(http_request_t* request_ptr, parser_t *pr)
 {
     int retval = INVALID_REQUEST;
@@ -396,13 +395,15 @@ static int parse_header(http_request_t* request_ptr, parser_t *pr)
         retval = REQUEST_OK;
         if (header == ContentType)
         {
-            request_ptr->headers_checkbox[ContentType] = true;
-            request_ptr->hd_content_type.str = pos_header_val_begin;
-            request_ptr->hd_content_type.len = pos_header_val_end - pos_header_val_begin;
+            retval = parse_header_content_type(pos_header_val_begin, pos_header_val_end, request_ptr);
+            if(REQUEST_OK == retval)
+                request_ptr->headers_checkbox[ContentType] = true;
         }
         else if (header == ContentLength)
         {
-
+            retval = parse_header_content_length(pos_header_val_begin, pos_header_val_end, request_ptr);
+            if(REQUEST_OK == retval)
+                request_ptr->headers_checkbox[ContentLength] = true;
         }
     }
     else
@@ -423,13 +424,11 @@ static int parse_payload(http_request_t* request_ptr, parser_state_t* p_state, u
 //                   *( header-field CRLF )
 //                   CRLF
 //                   [ message-body ]
-
 int parse_request(http_request_t* request_ptr)
 {
     int retval = INVALID_REQUEST;
 
     parser_t parser;
-    bool headers_end = false;
     parser.state = PS_PARSER_START;
     parser.curr_pos = 0;
 
@@ -452,9 +451,7 @@ int parse_request(http_request_t* request_ptr)
             if(request_ptr->msg_buf.buff_ptr[parser.curr_pos] == '\r' &&
                request_ptr->msg_buf.buff_ptr[parser.curr_pos + 1] == '\n')
             {
-                headers_end = true;
                 break;
-
             }
         }
         
@@ -462,8 +459,6 @@ int parse_request(http_request_t* request_ptr)
         retval = parse_header(request_ptr, &parser);
         if(retval != REQUEST_OK)
             return retval;
-
-        //return retval; 
 
         // decide if we have to parse http payload
     }

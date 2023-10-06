@@ -21,7 +21,7 @@ char http_msg_test[] = "POST /foo/456/&&8*#@@/aa HTTP/1.1\r\n"
 	"User-Agent: curl/7.35.0\r\n"
 	"Host: example.com\r\n"
 	"Accept: */*\r\n"
-	"Content-Length: 3\r\n"
+	"Content-Length: 3478654\r\n"
 	"Content-Type: text/plain\r\n"
 	"\r\n"
 	"foo";
@@ -29,6 +29,7 @@ char http_msg_test[] = "POST /foo/456/&&8*#@@/aa HTTP/1.1\r\n"
 static void print_parsed_request(http_request_t* request)
 {
 	char uri_str[URI_MAX_LENGTH];
+	char hd_val[HD_VAL_MAX_LENGTH];
 	printf("\tmethod: ");
 	switch(request->method)
 	{
@@ -46,12 +47,23 @@ static void print_parsed_request(http_request_t* request)
 		default:
 			break;
 	}
-	if (rstr_to_cstr(&request->uri, uri_str, URI_MAX_LENGTH) >= 0)	
+	if (rstr_to_cstr(&(request->uri), uri_str, URI_MAX_LENGTH) >= 0)	
 		printf("\turi: %s\n", uri_str);
 	else
 		printf("\turi: ERROR TRANSFORMIN R_STR TO C_STR"); 
 
-	printf("\thttp version: %hu.%hu\n", request->version.http_major, request->version.http_minor);
+	printf("\thttp version: %hu.%hu\n\n", request->version.http_major, request->version.http_minor);
+
+	if(request->headers_checkbox[ContentType] == true)
+	{
+		if (rstr_to_cstr(&(request->hd_content_type), hd_val, HD_VAL_MAX_LENGTH) >= 0)	
+			printf("\tHD{Content-Type}: %s\n", hd_val);
+		else
+			printf("\tHD{Content-Type}: ERROR TRANSFORMIN R_STR TO C_STR"); 
+	}
+	if(request->headers_checkbox[ContentLength] == true)
+		printf("\tHD{Content-Length}: %u", request->hd_content_length);
+
 }
 
 void handle_connection(int sockfd)
@@ -139,7 +151,7 @@ int main(int argc, char *argv[])
 
 	int parse_res = parse_request(&request);
 	if(parse_res == REQUEST_OK)
-	print_parsed_request(&request);
+		print_parsed_request(&request);
 	//-----------------------------------------
 
 	getchar();  // Debug purpose

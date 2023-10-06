@@ -11,7 +11,7 @@
 #define INSUFFICIENT_BUF (-3)
 
 #define URI_MAX_LENGTH 256
-#define HD_CONTENT_TYPE_VAL_LENGTH 64
+#define HD_VAL_MAX_LENGTH 128
 
 /* HTTP protocol version */
 typedef struct {
@@ -71,7 +71,7 @@ typedef struct http_request
     //--- http headers
     bool headers_checkbox[HttpHeadersCount]; //headers existence in request
 
-    int hd_content_length;
+    unsigned hd_content_length;
     rstr_t hd_content_type;
 
 }http_request_t;
